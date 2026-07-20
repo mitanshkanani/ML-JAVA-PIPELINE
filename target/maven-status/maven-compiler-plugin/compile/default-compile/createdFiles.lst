@@ -1,7 +1,6 @@
+com\mitansh\mljava\Main.class
 com\mitansh\mljava\ui\TerminalUI.class
+com\mitansh\mljava\utils\CSVWriter.class
 com\mitansh\mljava\regression\LinearRegression.class
 com\mitansh\mljava\utils\MatrixUtils.class
 com\mitansh\mljava\preprocessing\Preprocessing.class
-com\mitansh\mljava\ui\TerminalUI$1.class
-com\mitansh\mljava\Main.class
-com\mitansh\mljava\utils\CSVWriter.class
