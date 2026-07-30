@@ -16,12 +16,14 @@ public class TerminalUI {
 
     private static final String DATA_FOLDER = "data";
     private static final String CSV_EXTENSION = ".csv";
-    
+
     private Terminal terminal;
     private int selectedIndex = 0;
 
-    public String selectDataset() {
-        List<String> datasets = scanDatasets();
+    // [1] Scans data folder, starts UI, returns chosen CSV file name.
+    public String selectDataset() { // ---> [1]
+        List<String> datasets = scanDatasets(); // ---> [2] List will be returned for scanDatasets which will have name
+                                                // of all csv
 
         if (datasets.isEmpty()) {
             System.out.println("No CSV files found in '" + DATA_FOLDER + "' folder.");
@@ -29,8 +31,8 @@ public class TerminalUI {
         }
 
         try {
-            initializeTerminal();
-            return runSelectionLoop(datasets);
+            initializeTerminal(); // ---> [3]
+            return runSelectionLoop(datasets); // ---> [4]
         } catch (IOException e) {
             throw new RuntimeException("Failed to run terminal UI.", e);
         } finally {
@@ -38,10 +40,10 @@ public class TerminalUI {
         }
     }
 
-    private List<String> scanDatasets() {
+    // [2] Returns sorted list of .csv file names from data/ folder.
+    private List<String> scanDatasets() { // ---> [2]
         File folder = new File(DATA_FOLDER);
-        File[] files = folder.listFiles((dir, name) -> 
-            name.toLowerCase().endsWith(CSV_EXTENSION));
+        File[] files = folder.listFiles((dir, name) -> name.toLowerCase().endsWith(CSV_EXTENSION));
 
         List<String> names = new ArrayList<>();
         if (files != null) {
@@ -53,12 +55,13 @@ public class TerminalUI {
         return names;
     }
 
-    private void initializeTerminal() throws IOException {
+    // [3] Opens terminal with JNA support, switches to raw mode.
+    private void initializeTerminal() throws IOException { // ---> [3]
         terminal = TerminalBuilder.builder()
-                .system(true)
-                .jna(true)
-                .build();
-        terminal.enterRawMode();
+                .system(true) // use the real system terminal (stdin/stdout)
+                .jna(true) // enable JNA for native Windows support
+                .build(); // create the Terminal object
+        terminal.enterRawMode(); // switch to raw input mode
     }
 
     private void closeTerminal() {
@@ -66,63 +69,67 @@ public class TerminalUI {
             try {
                 terminal.close();
             } catch (IOException e) {
-                // ignore shutdown errors
+                // ignore
             }
         }
     }
 
-    private String runSelectionLoop(List<String> datasets) throws IOException {
+    // [4] Main loop: renders list, reads keys, returns selected file or null on
+    // quit.
+    private String runSelectionLoop(List<String> datasets) throws IOException { // ---> [4]
         while (true) {
-            render(datasets);
+            render(datasets); // ---> [6]
             int firstByte = terminal.reader().read();
 
-            // Enter (CR or LF)
             if (firstByte == '\r' || firstByte == '\n') {
                 return datasets.get(selectedIndex);
             }
 
-            // Quit keys (q / Q / plain ESC)
             if (firstByte == 'q' || firstByte == 'Q') {
                 return null;
             }
 
-            // Handle escape sequences (arrow keys, Esc)
-            if (firstByte == 27) {  // ESC
-                int nextByte = terminal.reader().read(200); // 200ms for next char
-                if (nextByte == -1) {
-                    return null; // plain ESC -> exit
-                }
+            if (firstByte == 27) {
+                int nextByte = terminal.reader().read(200);
+                if (nextByte == -1)
+                    return null;
 
-                // Standard CSI sequence ( ESC [ ... )
                 if (nextByte == '[') {
                     int arrowByte = terminal.reader().read(200);
                     switch (arrowByte) {
-                        case 'A': moveSelection(-1, datasets.size()); break; // Up
-                        case 'B': moveSelection(1, datasets.size());  break; // Down
-                        case 'C': break; // Right (ignore)
-                        case 'D': break; // Left (ignore)
-                        default:  break; // unknown CSI – ignore
+                        case 'A':
+                            moveSelection(-1, datasets.size());
+                            break; // ---> [5]
+                        case 'B':
+                            moveSelection(1, datasets.size());
+                            break; // ---> [5]
+                        default:
+                            break;
                     }
-                }
-                // Alternate SS3 sequence ( ESC O ... ) – used by some terminals
-                else if (nextByte == 'O') {
+                } else if (nextByte == 'O') {
                     int arrowByte = terminal.reader().read(200);
                     switch (arrowByte) {
-                        case 'A': moveSelection(-1, datasets.size()); break;
-                        case 'B': moveSelection(1, datasets.size());  break;
-                        default:  break;
+                        case 'A':
+                            moveSelection(-1, datasets.size());
+                            break; // ---> [5]
+                        case 'B':
+                            moveSelection(1, datasets.size());
+                            break; // ---> [5]
+                        default:
+                            break;
                     }
                 }
-                // Any other byte after ESC is ignored
             }
         }
     }
 
-    private void moveSelection(int delta, int size) {
+    // [5] Moves highlighted index up/down with wraparound.
+    private void moveSelection(int delta, int size) { // ---> [5]
         selectedIndex = ((selectedIndex + delta) % size + size) % size;
     }
 
-    private void render(List<String> datasets) {
+    // [6] Clears screen and redraws the full interface.
+    private void render(List<String> datasets) { // ---> [6]
         int width = terminal.getWidth();
         clearScreen();
         drawHeader(width);
@@ -154,14 +161,13 @@ public class TerminalUI {
             boolean isSelected = (i == selectedIndex);
             String prefix = isSelected ? "❯ " : "  ";
             String line = "  " + prefix + datasets.get(i);
-            
+
             if (isSelected) {
                 AttributedString styled = new AttributedString(
-                    line, 
-                    AttributedStyle.DEFAULT
-                        .foreground(AttributedStyle.BLACK)
-                        .background(AttributedStyle.CYAN)
-                );
+                        line,
+                        AttributedStyle.DEFAULT
+                                .foreground(AttributedStyle.BLACK)
+                                .background(AttributedStyle.CYAN));
                 printStyledLine(styled);
             } else {
                 printLine(line);
