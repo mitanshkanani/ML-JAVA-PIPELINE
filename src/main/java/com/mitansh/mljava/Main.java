@@ -18,9 +18,5 @@ public class Main {
         CSVReader reader = new CSVReader();
         reader.previewCSV("data/" + selectedDataset);
 
-        // Future: load dataset for ML pipeline
-        // Dataset raw = reader.read("data/" + selectedDataset);
-        // Preprocessing prep = new Preprocessing();
-        // Dataset cleaned = prep.clean(raw);
     }
 }
